@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة التحكم — NF Store</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/theme.css">
+<link rel="stylesheet" href="admin.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<div class="admin-shell">
+  <aside class="admin-sidebar">
+    <div class="admin-brand">NF <span>Store</span></div>
+    <nav class="admin-nav">
+      <button class="admin-nav-item active" data-tab="orders">
+        <span>الطلبات</span><span class="nav-badge" id="pendingBadge" hidden></span>
+      </button>
+      <button class="admin-nav-item" data-tab="products">المنتجات</button>
+      <button class="admin-nav-item" data-tab="categories">الفئات</button>
+      <button class="admin-nav-item" data-tab="settings">الإعدادات</button>
+    </nav>
+    <button class="admin-logout" id="logoutBtn">تسجيل الخروج</button>
+  </aside>
+
+  <main class="admin-main">
+    <!-- Orders Tab -->
+    <section class="admin-tab" id="tab-orders">
+      <div class="tab-head">
+        <h1>الطلبات</h1>
+        <div class="filter-row" id="orderFilters">
+          <button class="filter-pill active" data-filter="all">الكل</button>
+          <button class="filter-pill" data-filter="pending">قيد الانتظار</button>
+          <button class="filter-pill" data-filter="under_review">قيد المراجعة</button>
+          <button class="filter-pill" data-filter="confirmed">مؤكد</button>
+        </div>
+      </div>
+      <div id="ordersList" class="orders-list"></div>
+    </section>
+
+    <!-- Products Tab -->
+    <section class="admin-tab" id="tab-products" hidden>
+      <div class="tab-head">
+        <h1>المنتجات</h1>
+        <button class="btn btn-primary" id="addProductBtn">+ منتج جديد</button>
+      </div>
+      <div id="productsTable" class="data-table"></div>
+    </section>
+
+    <!-- Categories Tab -->
+    <section class="admin-tab" id="tab-categories" hidden>
+      <div class="tab-head">
+        <h1>الفئات</h1>
+        <button class="btn btn-primary" id="addCategoryBtn">+ فئة جديدة</button>
+      </div>
+      <div id="categoriesTable" class="data-table"></div>
+    </section>
+
+    <!-- Settings Tab -->
+    <section class="admin-tab" id="tab-settings" hidden>
+      <h1>إعدادات المتجر</h1>
+      <form id="settingsForm" class="settings-form">
+        <h3>بيانات التحويل البنكي</h3>
+        <label>اسم البنك<input type="text" name="bank_name"></label>
+        <label>اسم صاحب الحساب<input type="text" name="bank_account_name"></label>
+        <label>رقم الآيبان<input type="text" name="bank_iban"></label>
+
+        <h3>الدفع الإلكتروني</h3>
+        <label>رابط الدفع (Thawani / PayPal.me / غيره)<input type="url" name="online_payment_link"></label>
+
+        <h3>التواصل</h3>
+        <label>رقم واتساب (مع رمز الدولة، بدون +)<input type="text" name="whatsapp_number" placeholder="968XXXXXXXX"></label>
+        <label>حساب انستغرام<input type="text" name="instagram_handle" placeholder="@nf.store.om"></label>
+
+        <button type="submit" class="btn btn-primary">حفظ الإعدادات</button>
+        <p id="settingsSaved" class="saved-msg" hidden>تم الحفظ ✓</p>
+      </form>
+    </section>
+  </main>
+</div>
+
+<!-- Product edit modal -->
+<div class="overlay" id="productOverlay" hidden></div>
+<div class="modal" id="productModal" hidden>
+  <div class="modal-head">
+    <h2 id="productModalTitle">منتج جديد</h2>
+    <button class="icon-btn" id="closeProductModal">✕</button>
+  </div>
+  <form id="productForm" class="admin-form">
+    <input type="hidden" name="id">
+    <label>الاسم<input type="text" name="name" required></label>
+    <label>الوصف<textarea name="description" rows="2"></textarea></label>
+    <label>الفئة
+      <select name="category_id" id="categorySelect"></select>
+    </label>
+    <div class="form-row">
+      <label>السعر (ر.ع)<input type="number" step="0.001" min="0" name="price_omr" required></label>
+      <label>السعر قبل الخصم (اختياري)<input type="number" step="0.001" min="0" name="compare_at_price_omr"></label>
+    </div>
+    <div class="form-row">
+      <label>المخزون<input type="number" min="0" name="stock" required value="1"></label>
+      <label>رابط الصورة<input type="url" name="image_url"></label>
+    </div>
+    <label class="checkbox-row"><input type="checkbox" name="is_active" checked> نشط (ظاهر في المتجر)</label>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">حفظ</button>
+      <button type="button" class="btn btn-ghost" id="deleteProductBtn" hidden>حذف</button>
+    </div>
+  </form>
+</div>
+
+<!-- Category edit modal -->
+<div class="overlay" id="categoryOverlay" hidden></div>
+<div class="modal" id="categoryModal" hidden>
+  <div class="modal-head">
+    <h2 id="categoryModalTitle">فئة جديدة</h2>
+    <button class="icon-btn" id="closeCategoryModal">✕</button>
+  </div>
+  <form id="categoryForm" class="admin-form">
+    <input type="hidden" name="id">
+    <label>اسم الفئة<input type="text" name="name" required></label>
+    <label>ترتيب العرض<input type="number" name="sort_order" value="0"></label>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">حفظ</button>
+      <button type="button" class="btn btn-ghost" id="deleteCategoryBtn" hidden>حذف</button>
+    </div>
+  </form>
+</div>
+
+<!-- Order detail modal -->
+<div class="overlay" id="orderOverlay" hidden></div>
+<div class="modal modal-wide" id="orderModal" hidden>
+  <div class="modal-head">
+    <h2 id="orderModalTitle">تفاصيل الطلب</h2>
+    <button class="icon-btn" id="closeOrderModal">✕</button>
+  </div>
+  <div id="orderModalBody"></div>
+</div>
+
+<script src="../js/supabase-client.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

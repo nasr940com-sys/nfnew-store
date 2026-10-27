@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>تسجيل الدخول — لوحة تحكم NF Store</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/theme.css">
+<style>
+  body { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+  .login-card {
+    width: min(360px, calc(100% - 32px));
+    background: var(--bg-card);
+    border: 1px solid var(--border-bright);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    box-shadow: var(--shadow-card);
+    position: relative; z-index: 1;
+  }
+  .login-card h1 {
+    font-size: 22px;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .login-sub { text-align: center; color: var(--ink-dim); font-size: 13px; margin-bottom: 24px; }
+  form { display: flex; flex-direction: column; gap: 14px; }
+  label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--ink-dim); }
+  input {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-bright);
+    border-radius: var(--radius-sm);
+    padding: 11px 12px;
+    color: var(--ink);
+    font-size: 14px;
+    font-family: inherit;
+  }
+  input:focus { border-color: var(--accent); }
+  .btn { margin-top: 6px; }
+  .err { color: var(--danger); font-size: 13px; text-align: center; min-height: 18px; }
+</style>
+</head>
+<body>
+
+<div class="login-card">
+  <h1>NF <span style="color:var(--accent-bright)">Store</span></h1>
+  <p class="login-sub">لوحة التحكم — دخول المسؤولين فقط</p>
+  <form id="loginForm">
+    <label>البريد الإلكتروني
+      <input type="email" name="email" required autocomplete="username">
+    </label>
+    <label>كلمة المرور
+      <input type="password" name="password" required autocomplete="current-password">
+    </label>
+    <p class="err" id="errMsg" role="alert"></p>
+    <button type="submit" class="btn btn-primary" id="loginBtn">دخول</button>
+  </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../js/supabase-client.js"></script>
+<script>
+document.getElementById('loginForm').onsubmit = async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('loginBtn');
+  const errMsg = document.getElementById('errMsg');
+  errMsg.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'جاري الدخول...';
+
+  const formData = new FormData(e.target);
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: formData.get('email'),
+    password: formData.get('password'),
+  });
+
+  if (error) {
+    errMsg.textContent = 'بيانات الدخول غير صحيحة';
+    btn.disabled = false;
+    btn.textContent = 'دخول';
+    return;
+  }
+
+  // Verify this user is in the admins table
+  const { data: adminRow } = await supabase
+    .from('admins')
+    .select('user_id')
+    .eq('user_id', data.user.id)
+    .single();
+
+  if (!adminRow) {
+    errMsg.textContent = 'هذا الحساب غير مصرح له بدخول لوحة التحكم';
+    await supabase.auth.signOut();
+    btn.disabled = false;
+    btn.textContent = 'دخول';
+    return;
+  }
+
+  window.location.href = 'index.html';
+};
+
+// If already logged in and is admin, skip straight to dashboard
+(async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return;
+  const { data: adminRow } = await supabase
+    .from('admins')
+    .select('user_id')
+    .eq('user_id', session.user.id)
+    .single();
+  if (adminRow) window.location.href = 'index.html';
+})();
+</script>
+</body>
+</html>

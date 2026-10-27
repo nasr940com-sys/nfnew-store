@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NF Store — اشتراكات وحسابات رقمية</title>
+<meta name="description" content="متجر NF Store لبيع الاشتراكات والحسابات الرقمية في عُمان">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/theme.css">
+<link rel="stylesheet" href="css/store.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container header-row">
+    <div class="brand">
+      <span class="brand-mark">NF</span>
+      <span class="brand-name">Store</span>
+    </div>
+    <nav class="main-nav" id="categoryNav" aria-label="فئات المنتجات">
+      <!-- categories injected here -->
+    </nav>
+    <button class="cart-btn" id="cartBtn" aria-haspopup="dialog" aria-controls="cartPanel">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.3 4.6A1 1 0 0 0 5.6 19H17M17 19a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM9 19a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/></svg>
+      <span id="cartCount" class="cart-count">0</span>
+    </button>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="container hero-inner">
+    <h1>اشتراكاتك الرقمية، <span class="hero-accent">بثقة وتسليم فوري</span></h1>
+    <p class="hero-sub">حسابات ستريمنغ، ألعاب، وبرامج أصلية — ضمان كامل على كل طلب.</p>
+  </div>
+</section>
+
+<main class="container">
+  <div id="productGrid" class="product-grid" aria-live="polite">
+    <!-- products injected here -->
+  </div>
+  <p id="emptyState" class="empty-state" hidden>ما فيه منتجات متاحة بهذا القسم حالياً.</p>
+</main>
+
+<footer class="site-footer">
+  <div class="container footer-row">
+    <span>© 2026 NF Store</span>
+    <a id="whatsappLink" href="#" target="_blank" rel="noopener">تواصل واتساب</a>
+  </div>
+</footer>
+
+<!-- Cart drawer -->
+<div class="overlay" id="overlay" hidden></div>
+<aside class="cart-panel" id="cartPanel" role="dialog" aria-label="سلة المشتريات" aria-modal="true" hidden>
+  <div class="cart-head">
+    <h2>سلة المشتريات</h2>
+    <button class="icon-btn" id="closeCart" aria-label="إغلاق السلة">✕</button>
+  </div>
+  <div class="cart-items" id="cartItems"></div>
+  <div class="cart-footer">
+    <div class="cart-total-row">
+      <span>الإجمالي</span>
+      <strong id="cartTotal">0.000 ر.ع</strong>
+    </div>
+    <button class="btn btn-primary cart-checkout-btn" id="checkoutBtn">إتمام الطلب</button>
+  </div>
+</aside>
+
+<!-- Checkout modal -->
+<div class="overlay" id="checkoutOverlay" hidden></div>
+<div class="modal" id="checkoutModal" role="dialog" aria-label="إتمام الطلب" aria-modal="true" hidden>
+  <div class="modal-head">
+    <h2>إتمام الطلب</h2>
+    <button class="icon-btn" id="closeCheckout" aria-label="إغلاق">✕</button>
+  </div>
+  <form id="checkoutForm" class="checkout-form">
+    <label>الاسم الكامل
+      <input type="text" name="customer_name" required autocomplete="name">
+    </label>
+    <label>رقم الهاتف (واتساب)
+      <input type="tel" name="customer_phone" required autocomplete="tel" placeholder="9XXXXXXX">
+    </label>
+    <label>البريد الإلكتروني (اختياري)
+      <input type="email" name="customer_email" autocomplete="email">
+    </label>
+
+    <fieldset class="pay-method">
+      <legend>طريقة الدفع</legend>
+      <label class="radio-row">
+        <input type="radio" name="payment_method" value="bank_transfer" checked>
+        <span>تحويل بنكي (رفع إيصال)</span>
+      </label>
+      <label class="radio-row">
+        <input type="radio" name="payment_method" value="online_link">
+        <span>دفع إلكتروني عبر رابط</span>
+      </label>
+    </fieldset>
+
+    <div id="bankDetails" class="pay-details">
+      <p class="pay-note">حوّل المبلغ على الحساب التالي، وارفع صورة الإيصال:</p>
+      <div class="bank-info" id="bankInfo"></div>
+      <label>إيصال التحويل
+        <input type="file" name="proof" accept="image/*,.pdf" id="proofInput">
+      </label>
+    </div>
+
+    <div id="onlineDetails" class="pay-details" hidden>
+      <p class="pay-note">اضغط الرابط لإتمام الدفع، ثم الصق رقم العملية هنا:</p>
+      <a id="onlinePayLink" class="btn btn-ghost" target="_blank" rel="noopener">فتح رابط الدفع</a>
+      <label>رقم العملية / المرجع
+        <input type="text" name="reference_note" id="referenceInput">
+      </label>
+    </div>
+
+    <div class="checkout-total-row">
+      <span>الإجمالي المستحق</span>
+      <strong id="checkoutTotal">0.000 ر.ع</strong>
+    </div>
+
+    <button type="submit" class="btn btn-primary" id="submitOrderBtn">تأكيد الطلب</button>
+    <p id="checkoutError" class="form-error" role="alert" hidden></p>
+  </form>
+</div>
+
+<!-- Order confirmation -->
+<div class="overlay" id="successOverlay" hidden></div>
+<div class="modal modal-success" id="successModal" role="dialog" aria-modal="true" hidden>
+  <div class="success-icon">✓</div>
+  <h2>تم استلام طلبك</h2>
+  <p>رقم طلبك: <strong id="successOrderNumber"></strong></p>
+  <p class="success-sub">بنراجع الدفع ونجهز طلبك، بنتواصل معك على الواتساب قريباً.</p>
+  <button class="btn btn-primary" id="closeSuccess">تم</button>
+</div>
+
+<script src="js/supabase-client.js"></script>
+<script src="js/store.js"></script>
+</body>
+</html>
